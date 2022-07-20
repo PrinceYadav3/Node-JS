@@ -1,107 +1,33 @@
 const fs = require('fs');
 const express = require('express');
+const morgan = require('morgan');
+
+const toursRouter = require('./routes/toursRoutes');
+const usersRouter = require('./routes/usersRoutes');
 
 const app = express();
 
+// MIDDLE WARES
+// app.use(morgan('dev', { immediate: true }));
+app.use(morgan('dev'));
+
 app.use(express.json());
 
-const tours = JSON.parse(
-  fs.readFileSync(`${__dirname}/dev-data/data/tours-simple.json`, 'utf-8')
-);
+app.use((req, res, next) => {
+  console.log('Hello From Middle Ware');
+  next();
+});
 
-const getAllTours = (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    results: tours.length,
-    body: {
-      tours,
-    },
-  });
-};
+app.use((req, res, next) => {
+  req.requestTime = new Date().toISOString();
+  next();
+});
 
-const getTour = (req, res) => {
-  const id = +req.params.id;
-  const tour = tours.find((el) => el.id === id);
-  if (!tour) {
-    res.status(404).json({
-      status: 'fail',
-      message: 'Invalid ID',
-    });
-  }
-  res.status(200).json({
-    status: 'success',
-    body: {
-      tour,
-    },
-  });
-};
+app.use('/api/v1/tours', toursRouter);
+app.use('/api/v1/users', usersRouter);
 
-const createTour = (req, res) => {
-  const newId = tours[tours.length - 1].id + 1;
-  const tour = Object.assign({ id: newId }, req.body);
-  console.log(tour);
-  tours.push(tour);
-  fs.writeFile(
-    `${__dirname}/dev-data/data/tours-simple.json`,
-    JSON.stringify(tours),
-    (err) => {
-      console.log(err);
-    }
-  );
-  res.status(201).json({
-    status: 'success',
-    body: {
-      tour,
-    },
-  });
-};
-
-const updateTour = (req, res) => {
-  if (+req.params.id > tours.length) {
-    res.status(404).json({
-      status: 'fail',
-      message: 'Invalid ID',
-    });
-  }
-
-  res.status(200).json({
-    status: 'success',
-    body: {
-      tour: '<Updated tour here...>',
-    },
-  });
-};
-
-const deleteTour = (req, res) => {
-  if (+req.params.id > tours.length) {
-    res.status(404).json({
-      status: 'fail',
-      message: 'Invalid ID',
-    });
-  }
-
-  res.status(204).json({
-    status: 'success',
-    body: null,
-  });
-};
-
-// app.get('/api/v1/tours', getAllTours);
-// app.post('/api/v1/tours', createTour);
-// app.get('/api/v1/tours/:id', getTour);
-// app.patch('/api/v1/tours/:id', updateTour);
-// app.delete('/api/v1/tours/:id', deleteTour);
-
-app.route('/api/v1/tours').get(getAllTours).post(createTour);
-
-app
-  .route('/api/v1/tours/:id')
-  .get(getTour)
-  .patch(updateTour)
-  .delete(deleteTour);
-
+// START SERVER.
 const port = 3000;
-
 app.listen(port, () => {
   console.log(`App is listening to port: ${port}`);
 });
